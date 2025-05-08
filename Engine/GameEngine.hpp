@@ -14,6 +14,7 @@ namespace Engine {
     /// <summary>
     /// The one and only GameEngine for the entire program. Responsible for low-level initialization and window events.
     /// </summary>
+    // final : virtual keyword cannot be overridden in a derived class
     class GameEngine final {
     private:
         // Allegro5 settings, frames per second, screen width, screen height, maximum simultaneous audio samples.
@@ -68,6 +69,7 @@ namespace Engine {
         /// Note: Singleton is a class that will only be instantiated once (single instance).
         /// Reference: Design Patterns - Singleton.
         /// </summary>
+        // explicit keyword
         explicit GameEngine() = default;
         /// <summary>
         /// Change to another scene. Must return immediately and stop using anything initialized in

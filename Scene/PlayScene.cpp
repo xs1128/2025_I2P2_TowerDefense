@@ -11,6 +11,7 @@
 #include "Enemy/Enemy.hpp"
 #include "Enemy/SoldierEnemy.hpp"
 #include "Enemy/TankEnemy.hpp"
+#include "Enemy/PlaneEnemy.hpp"
 #include "Engine/AudioHelper.hpp"
 #include "Engine/GameEngine.hpp"
 #include "Engine/Group.hpp"
@@ -24,11 +25,11 @@
 #include "UI/Animation/Plane.hpp"
 #include "UI/Component/Label.hpp"
 
-// TODO HACKATHON-4 (1/3): Trace how the game handles keyboard input.
-// TODO HACKATHON-4 (2/3): Find the cheat code sequence in this file.
-// TODO HACKATHON-4 (3/3): When the cheat code is entered, a plane should be spawned and added to the scene.
-// TODO HACKATHON-5 (1/4): There's a bug in this file, which crashes the game when you win. Try to find it.
-// TODO HACKATHON-5 (2/4): The "LIFE" label are not updated when you lose a life. Try to fix it.
+// DONE HACKATHON-4 (1/3): Trace how the game handles keyboard input.
+// DONE HACKATHON-4 (2/3): Find the cheat code sequence in this file.
+// DONE HACKATHON-4 (3/3): When the cheat code is entered, a plane should be spawned and added to the scene.
+// DONE HACKATHON-5 (1/4): There's a bug in this file, which crashes the game when you win. Try to find it.
+// DONE HACKATHON-5 (2/4): The "LIFE" label are not updated when you lose a life. Try to fix it.
 
 bool PlayScene::DebugMode = false;
 const std::vector<Engine::Point> PlayScene::directions = { Engine::Point(-1, 0), Engine::Point(0, -1), Engine::Point(1, 0), Engine::Point(0, 1) };
@@ -39,8 +40,8 @@ const Engine::Point PlayScene::SpawnGridPoint = Engine::Point(-1, 0);
 const Engine::Point PlayScene::EndGridPoint = Engine::Point(MapWidth, MapHeight - 1);
 const std::vector<int> PlayScene::code = {
     ALLEGRO_KEY_UP, ALLEGRO_KEY_UP, ALLEGRO_KEY_DOWN, ALLEGRO_KEY_DOWN,
-    ALLEGRO_KEY_LEFT, ALLEGRO_KEY_RIGHT, ALLEGRO_KEY_LEFT, ALLEGRO_KEY_RIGHT,
-    ALLEGRO_KEY_B, ALLEGRO_KEY_A, ALLEGRO_KEYMOD_SHIFT, ALLEGRO_KEY_ENTER
+    // ALLEGRO_KEY_LEFT, ALLEGRO_KEY_RIGHT, ALLEGRO_KEY_LEFT, ALLEGRO_KEY_RIGHT,
+    // ALLEGRO_KEY_B, ALLEGRO_KEY_A, ALLEGRO_KEYMOD_SHIFT, ALLEGRO_KEY_ENTER
 };
 Engine::Point PlayScene::GetClientSize() {
     return Engine::Point(MapWidth * BlockSize, MapHeight * BlockSize);
@@ -135,17 +136,17 @@ void PlayScene::Update(float deltaTime) {
         if (enemyWaveData.empty()) {
             if (EnemyGroup->GetObjects().empty()) {
                 // Free resources.
-                /*delete TileMapGroup;
-                delete GroundEffectGroup;
-                delete DebugIndicatorGroup;
-                delete TowerGroup;
-                delete EnemyGroup;
-                delete BulletGroup;
-                delete EffectGroup;
-                delete UIGroup;
-                delete imgTarget;*/
+                // delete TileMapGroup;
+                // delete GroundEffectGroup;
+                // delete DebugIndicatorGroup;
+                // delete TowerGroup;
+                // delete EnemyGroup;
+                // delete BulletGroup;
+                // delete EffectGroup;
+                // delete UIGroup;
+                // delete imgTarget;
                 // Win.
-                Engine::GameEngine::GetInstance().ChangeScene("win-scene");
+                Engine::GameEngine::GetInstance().ChangeScene("win");
             }
             continue;
         }
@@ -160,9 +161,10 @@ void PlayScene::Update(float deltaTime) {
             case 1:
                 EnemyGroup->AddNewObject(enemy = new SoldierEnemy(SpawnCoordinate.x, SpawnCoordinate.y));
                 break;
-            // TODO HACKATHON-3 (2/3): Add your new enemy here.
-            // case 2:
-            //     ...
+            // DONE HACKATHON-3 (2/3): Add your new enemy here.
+            case 2:
+                EnemyGroup->AddNewObject(enemy = new PlaneEnemy(SpawnCoordinate.x, SpawnCoordinate.y));
+                break;
             case 3:
                 EnemyGroup->AddNewObject(enemy = new TankEnemy(SpawnCoordinate.x, SpawnCoordinate.y));
                 break;
@@ -262,6 +264,31 @@ void PlayScene::OnKeyDown(int keyCode) {
         keyStrokes.push_back(keyCode);
         if (keyStrokes.size() > code.size())
             keyStrokes.pop_front();
+
+        // is same size check if the content is the same by traversing the list
+        bool flag = (keyStrokes.size() == code.size());
+        if (flag)
+        {
+            auto it1 = keyStrokes.begin();
+            auto it2 = code.begin();
+            while (it1 != keyStrokes.end())
+            {
+                if (*it1 == *it2)
+                {
+                    ++it1;
+                    ++it2;
+                    continue;
+                }
+                flag = false;
+                break;
+            }
+            if (flag)
+            {
+                Engine::LOG(Engine::INFO) << "Cheat code triggered, spawning plane!";
+                keyStrokes.clear();
+                UIGroup->AddNewObject(new Plane);
+            }
+        }
     }
     if (keyCode == ALLEGRO_KEY_Q) {
         // Hotkey for MachineGunTurret.
@@ -276,7 +303,8 @@ void PlayScene::OnKeyDown(int keyCode) {
     }
 }
 void PlayScene::Hit() {
-    lives--;
+    (this->lives)--;
+    UILives->Text = std::string("Life ") + std::to_string(this->lives);
     if (lives <= 0) {
         Engine::GameEngine::GetInstance().ChangeScene("lose");
     }
@@ -422,9 +450,34 @@ std::vector<std::vector<int>> PlayScene::CalculateBFSDistance() {
     while (!que.empty()) {
         Engine::Point p = que.front();
         que.pop();
-        // TODO PROJECT-1 (1/1): Implement a BFS starting from the most right-bottom block in the map.
+        // DONE PROJECT-1 (1/1): Implement a BFS starting from the most right-bottom block in the map.
         //               For each step you should assign the corresponding distance to the most right-bottom block.
         //               mapState[y][x] is TILE_DIRT if it is empty.
+
+        // Current dist from end (Prefix sum concept)
+        int d = map[p.y][p.x];
+
+        // Set 4 conditions for tile dirt to be valid
+        if (p.x > 0 && mapState[p.y][p.x - 1] == TILE_DIRT && map[p.y][p.x - 1] == -1)
+        {
+            map[p.y][p.x - 1] = d + 1;
+            que.push(Engine::Point(p.x - 1, p.y));
+        }
+        if (p.x < MapWidth - 1 && mapState[p.y][p.x + 1] == TILE_DIRT && map[p.y][p.x + 1] == -1)
+        {
+            map[p.y][p.x + 1] = d + 1;
+            que.push(Engine::Point(p.x + 1, p.y));
+        }
+        if (p.y > 0 && mapState[p.y - 1][p.x] == TILE_DIRT && map[p.y - 1][p.x] == -1)
+        {
+            map[p.y - 1][p.x] = d + 1;
+            que.push(Engine::Point(p.x, p.y - 1));
+        }
+        if (p.y < MapHeight - 1 && mapState[p.y + 1][p.x] == TILE_DIRT && map[p.y + 1][p.x] == -1)
+        {
+            map[p.y + 1][p.x] = d + 1;
+            que.push(Engine::Point(p.x, p.y + 1));
+        }
     }
     return map;
 }

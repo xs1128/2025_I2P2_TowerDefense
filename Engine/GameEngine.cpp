@@ -76,6 +76,7 @@ namespace Engine {
         al_start_timer(update_timer);
     }
     void GameEngine::startEventLoop() {
+        // done is game window closed
         bool done = false;
         ALLEGRO_EVENT event;
         int redraws = 0;
@@ -143,6 +144,7 @@ namespace Engine {
 
             // Redraw the scene.
             if (redraws > 0 && al_is_event_queue_empty(event_queue)) {
+                // wowwww
                 if (redraws > 1)
                     LOG(VERBOSE) << redraws - 1 << " frame(s) dropped";
                 // Calculate the timeElapsed and update the timestamp.
@@ -262,6 +264,7 @@ namespace Engine {
     }
     GameEngine &GameEngine::GetInstance() {
         // The classic way to lazy initialize a Singleton.
+        // wow, cool technique get
         static GameEngine instance;
         return instance;
     }

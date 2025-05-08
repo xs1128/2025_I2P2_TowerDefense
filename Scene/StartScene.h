@@ -10,6 +10,8 @@
 
 #include "Engine/IScene.hpp"
 class StartScene final : public Engine::IScene {
+private:
+    std::shared_ptr<ALLEGRO_SAMPLE_INSTANCE> bgmInstance;
 public:
     explicit StartScene() = default;
     void Initialize() override;
