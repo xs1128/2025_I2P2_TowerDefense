@@ -13,6 +13,8 @@ endif
 
 .PHONY: load build run clean
 
+all: load build run
+
 # Load the project configuration
 load:
 	@echo "Loading project configuration..."
