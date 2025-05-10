@@ -6,6 +6,7 @@
 #include <allegro5/bitmap_draw.h>
 
 #include "Engine/LOG.hpp"
+#include "UI/Component/ImageButton.hpp"
 
 Slider::Slider(float x, float y, float w, float h)
     : ImageButton("stage-select/slider.png", "stage-select/slider-blue.png", x, y),
@@ -23,9 +24,7 @@ void Slider::Draw() const {
     End1.Draw();
     End2.Draw();
     // Handle
-    al_draw_scaled_bitmap(bmp.get(), 0, 0, GetBitmapWidth(), GetBitmapHeight(),
-                              Position.x - Anchor.x * GetBitmapWidth(), Position.y - Anchor.y * GetBitmapHeight(),
-                              Size.x, Size.y, 0);
+    Engine::ImageButton::Draw();
 }
 void Slider::SetOnValueChangedCallback(std::function<void(float value)> onValueChangedCallback) {
     OnValueChangedCallback = onValueChangedCallback;
