@@ -10,7 +10,7 @@ class ScoreboardScene final : public Engine::IScene {
     ALLEGRO_SAMPLE_ID bgmId;
     int page;
     int page_cap;
-    std::vector<std::pair<std::string, int>> info;
+    std::vector<std::tuple<std::string, int, std::string>> info;
 
     int spacing;
 

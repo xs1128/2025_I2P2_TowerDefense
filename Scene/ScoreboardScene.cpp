@@ -1,3 +1,5 @@
+#include <algorithm>
+#include <filesystem>
 #include <fstream>
 #include <functional>
 #include <sstream>
@@ -16,6 +18,7 @@
 
 void ScoreboardScene::Initialize()
 {
+    std::string filepath = "Resource/scoreboard.txt";
     // init curr page
     page = 0;
 
@@ -27,18 +30,27 @@ void ScoreboardScene::Initialize()
     int halfH = h / 2;
 
     // load the previous data of player score
-    std::ifstream f("Resource/scoreboard.txt");
+    std::ifstream f(filepath);
     std::string line;
     while (getline(f, line)) {
-        std::string name;
-        int score;
-        std::stringstream ss(line);
-        ss >> name >> score;
-        info.push_back({name, score});
+        if (!line.empty()) {
+            std::string name, date, time;
+            int score;
+            std::stringstream ss(line);
+            ss >> name >> score >> date >> time;
+
+            info.push_back({name, score, date + " " + time});
+        }
     }
     f.close();
+    // sort the info according to score
+    // use built-in sort and lambda for comparison
+    sort(info.begin(), info.end(), [](const auto &a, const auto &b) {
+        return std::get<1>(a) > std::get<1>(b);
+    });
 
-    page_cap = info.size() / 5;
+    page_cap = (info.size() == 0) ? 0 : (info.size() + 4) / 5 - 1;
+    page_cap = (page_cap == 0) ? 1 : page_cap;
 
     Engine::ImageButton *btn;
     btn = new Engine::ImageButton("stage-select/dirt.png",
@@ -69,7 +81,8 @@ void ScoreboardScene::Initialize()
     AddNewObject(new Engine::Label("Next", "pirulen.ttf", 36, halfW * 2 - 150,
                                    (double)halfH * 3 / 2, 0, 0, 0, 255, 0.5,
                                    0.5));
-    UpdatePage(0);
+
+    bgmId = AudioHelper::PlayBGM("happy.ogg");
 }
 void ScoreboardScene::Terminate()
 {
@@ -92,23 +105,39 @@ void ScoreboardScene::Draw() const
     int w = Engine::GameEngine::GetInstance().GetScreenSize().x;
     int h = Engine::GameEngine::GetInstance().GetScreenSize().y;
 
-    int items = (page == page_cap) ? info.size() % 5 : 5;
+    Engine::Label name_lbl("Name", "pirulen.ttf", 56, (double)w / 6,
+                           (double)h / 8, 0, 0, 0, 255, 0.5, 0.5);
+    Engine::Label score_lbl("Score", "pirulen.ttf", 56, (double)w / 2.5,
+                            (double)h / 8, 0, 0, 0, 255, 0.5, 0.5);
+    Engine::Label datetime_lbl("Date & Time", "pirulen.ttf", 56, (double)w / 1.4,
+                            (double)h / 8, 0, 0, 0, 255, 0.5, 0.5);
+    name_lbl.Draw();
+    score_lbl.Draw();
+    datetime_lbl.Draw();
+
+    // basically the items either 1 to 5 per page and the case 0 is handled by diving previously to get page_cap
+    int items = (page == page_cap) ? ((info.size() % 5 == 0) ? 5 : info.size() % 5) : 5;
     for (int i = 0; i < items; ++i) {
-        Engine::Label lbl(info[i + page * 5].first, "pirulen.ttf", 48,
-                          (double)w / 2 - 150, (double)h / 5 + spacing * i, 0,
-                          255, 0, 255, 0.5, 0.5);
-        Engine::Label lbl1(std::to_string(info[i + page * 5].second),
-                           "pirulen.ttf", 36, (double)w / 2 + 150,
-                           (double)h / 5 + spacing * i, 0, 0, 0, 255, 0.5, 0.5);
+        auto [name, score, date] = info[i + page * 5];
+        Engine::Label lbl(name, "pirulen.ttf", 48, (double)w / 6,
+                          (double)h / 4 + spacing * i, 255, 255, 255, 255, 0.5,
+                          0.5);
+        Engine::Label lbl1(std::to_string(score), "pirulen.ttf", 48,
+                           (double)w / 2.5, (double)h / 4 + spacing * i,
+                           255, 255, 255, 255, 0.5, 0.5);
+        Engine::Label lbl2(date,  "pirulen.ttf", 48,
+                           (double)w / 1.4, (double)h / 4 + spacing * i,
+                           255, 255, 255, 255, 0.5, 0.5);
         lbl.Draw();
         lbl1.Draw();
+        lbl2.Draw();
     }
-    Engine::Label curr_page(std::to_string(page + 1) + " / ", "pirulen.ttf", 36,
-                            (double)w / 2.05, (double)h * 0.75, 0, 0, 0, 255,
+    Engine::Label curr_page(std::to_string(page + 1), "pirulen.ttf", 36,
+                            (double)w / 2.2, (double)h * 0.75, 0, 0, 0, 255,
                             0.5, 0.5);
-    Engine::Label total_page(std::to_string(page_cap + 1), "pirulen.ttf", 36,
-                             (double)w / 1.95, (double)h * 0.75, 0, 0, 0, 255,
-                             0.5, 0.5);
+    Engine::Label total_page(" / " + std::to_string(page_cap + 1),
+                             "pirulen.ttf", 36, (double)w / 2, (double)h * 0.75,
+                             0, 0, 0, 255, 0.5, 0.5);
     curr_page.Draw();
     total_page.Draw();
 }
