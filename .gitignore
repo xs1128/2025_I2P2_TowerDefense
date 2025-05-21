@@ -13,3 +13,5 @@ build
 
 # Others
 log.txt
+
+.cache
