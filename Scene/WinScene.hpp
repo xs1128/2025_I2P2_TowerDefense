@@ -4,11 +4,13 @@
 #include <allegro5/allegro_audio.h>
 
 class WinScene final : public Engine::IScene {
-private:
+  private:
     float ticks;
     ALLEGRO_SAMPLE_ID bgmId;
+    std::string name;
+    int input_timer;
 
-public:
+  public:
     explicit WinScene() = default;
     void Initialize() override;
     void Terminate() override;
@@ -16,4 +18,4 @@ public:
     void BackOnClick(int stage);
 };
 
-#endif   // WINSCENE_HPP
+#endif // WINSCENE_HPP

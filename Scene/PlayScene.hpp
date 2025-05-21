@@ -11,14 +11,14 @@
 
 class Turret;
 namespace Engine {
-    class Group;
-    class Image;
-    class Label;
-    class Sprite;
-}   // namespace Engine
+class Group;
+class Image;
+class Label;
+class Sprite;
+} // namespace Engine
 
 class PlayScene final : public Engine::IScene {
-private:
+  private:
     enum TileType {
         TILE_DIRT,
         TILE_FLOOR,
@@ -27,12 +27,12 @@ private:
     ALLEGRO_SAMPLE_ID bgmId;
     std::shared_ptr<ALLEGRO_SAMPLE_INSTANCE> deathBGMInstance;
 
-protected:
+  protected:
     int lives;
     int money;
     int SpeedMult;
 
-public:
+  public:
     static bool DebugMode;
     static const std::vector<Engine::Point> directions;
     static const int MapWidth, MapHeight;
@@ -83,4 +83,4 @@ public:
     std::vector<std::vector<int>> CalculateBFSDistance();
     // void ModifyReadMapTiles();
 };
-#endif   // PLAYSCENE_HPP
+#endif // PLAYSCENE_HPP

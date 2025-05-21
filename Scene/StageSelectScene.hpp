@@ -6,10 +6,10 @@
 #include "Engine/IScene.hpp"
 
 class StageSelectScene final : public Engine::IScene {
-private:
+  private:
     std::shared_ptr<ALLEGRO_SAMPLE_INSTANCE> bgmInstance;
 
-public:
+  public:
     explicit StageSelectScene() = default;
     void Initialize() override;
     void Terminate() override;
@@ -21,4 +21,4 @@ public:
     void SFXSlideOnValueChanged(float value);
 };
 
-#endif   // STAGESELECTSCENE_HPP
+#endif // STAGESELECTSCENE_HPP
