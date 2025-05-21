@@ -33,18 +33,3 @@ build:
 run:
 	@echo "Running project..."
 	@${BUILD_DIR}/${PROJECT_NAME}
-
-# Check (for testing)
-check:
-	@echo "Running tests..."
-		@cmake --build $(BUILD_DIR) --target test
-
-# Distcheck (simulate release build + test)
-distcheck:
-	@echo "Running distribution check..."
-		@cmake --build $(BUILD_DIR) --target package
-			@echo "Distribution package created."
-
-# cmake -DCMAKE_BUILD_TYPE=Debug -DCMAKE_EXPORT_COMPILE_COMMANDS=TRUE -DCMAKE_MAKE_PROGRAM="%cd%/ninja" -S "%cd%/" -B "%cd%/build" -G "Unix Makefiles" &&
-# cmake --build "./build" --target all --config Debug -j 8 &&
-# start "./build/2025_I2P2_TowerDefense_with_answer"
