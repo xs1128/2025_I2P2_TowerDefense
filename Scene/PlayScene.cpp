@@ -32,6 +32,8 @@
 // file, which crashes the game when you win. Try to find it. DONE HACKATHON-5
 // (2/4): The "LIFE" label are not updated when you lose a life. Try to fix it.
 
+bool PlayScene::shovelActive = false;
+
 bool PlayScene::DebugMode = false;
 const std::vector<Engine::Point> PlayScene::directions = {
     Engine::Point(-1, 0), Engine::Point(0, -1), Engine::Point(1, 0),
@@ -84,6 +86,7 @@ void PlayScene::Initialize()
     Engine::Resources::GetInstance().GetBitmap("lose/benjamin-happy.png");
     // Start BGM.
     bgmId = AudioHelper::PlayBGM("play.ogg");
+    shovelActive = false;
 }
 void PlayScene::Terminate()
 {
@@ -227,6 +230,38 @@ void PlayScene::OnMouseDown(int button, int mx, int my)
         UIGroup->RemoveObject(preview->GetObjectIterator());
         preview = nullptr;
     }
+
+    if (shovelActive) {
+        // remove the sprite 
+        UIGroup->RemoveObject(shovel->GetObjectIterator());
+        shovelActive = false;
+        const int x = mx / BlockSize;
+        const int y = my / BlockSize;
+        if (x < 0 || x >= MapWidth || y < 0 || y >= MapHeight)
+            return;
+        // check if occupied
+        if (mapState[y][x] == TILE_OCCUPIED) {
+            mapState[y][x] = TILE_FLOOR;
+            // remove the turret
+            for (auto &it : TowerGroup->GetObjects()) {
+                if (it->Position.x == x * BlockSize + (double)BlockSize / 2 &&
+                    it->Position.y == y * BlockSize + (double)BlockSize / 2) {
+                    EarnMoney(
+                        dynamic_cast<Turret *>(it)->GetPrice() / 2);
+                    TowerGroup->RemoveObject(it->GetObjectIterator());
+                    // create sfx of shovel
+                    // TODO: add to credits.md
+                    AudioHelper::PlayAudio("shovel.ogg");
+                    break;
+                }
+            }
+            // remove the dirt
+            TileMapGroup->AddNewObject(
+                new Engine::Image("play/floor.png", x * BlockSize,
+                                  y * BlockSize, BlockSize, BlockSize));
+        }
+    }
+
     IScene::OnMouseDown(button, mx, my);
 }
 void PlayScene::OnMouseMove(int mx, int my)
@@ -234,6 +269,12 @@ void PlayScene::OnMouseMove(int mx, int my)
     IScene::OnMouseMove(mx, my);
     const int x = mx / BlockSize;
     const int y = my / BlockSize;
+
+    if (shovelActive) {
+        shovel->Position.x = mx;
+        shovel->Position.y = my;
+    }
+
     if (!preview || x < 0 || x >= MapWidth || y < 0 || y >= MapHeight) {
         imgTarget->Visible = false;
         return;
@@ -258,8 +299,8 @@ void PlayScene::OnMouseUp(int button, int mx, int my)
                 Engine::Sprite *sprite;
                 GroundEffectGroup->AddNewObject(
                     sprite = new DirtyEffect("play/target-invalid.png", 1,
-                                             x * BlockSize + BlockSize / 2,
-                                             y * BlockSize + BlockSize / 2));
+                                             x * BlockSize + (double)BlockSize / 2,
+                                             y * BlockSize + (double)BlockSize / 2));
                 sprite->Rotation = 0;
                 return;
             }
@@ -269,8 +310,8 @@ void PlayScene::OnMouseUp(int button, int mx, int my)
             preview->GetObjectIterator()->first = false;
             UIGroup->RemoveObject(preview->GetObjectIterator());
             // Construct real turret.
-            preview->Position.x = x * BlockSize + BlockSize / 2;
-            preview->Position.y = y * BlockSize + BlockSize / 2;
+            preview->Position.x = x * BlockSize + (double)BlockSize / 2;
+            preview->Position.y = y * BlockSize + (double)BlockSize / 2;
             preview->Enabled = true;
             preview->Preview = false;
             preview->Tint = al_map_rgba(255, 255, 255, 255);
@@ -319,13 +360,16 @@ void PlayScene::OnKeyDown(int keyCode)
             }
         }
     }
-    if (keyCode == ALLEGRO_KEY_Q) {
-        // Hotkey for MachineGunTurret.
+    if (keyCode == ALLEGRO_KEY_S) {
         UIBtnClicked(0);
+    }
+    else if (keyCode == ALLEGRO_KEY_Q) {
+        // Hotkey for MachineGunTurret.
+        UIBtnClicked(1);
     }
     else if (keyCode == ALLEGRO_KEY_W) {
         // Hotkey for LaserTurret.
-        UIBtnClicked(1);
+        UIBtnClicked(2);
     }
     else if (keyCode >= ALLEGRO_KEY_0 && keyCode <= ALLEGRO_KEY_9) {
         // Hotkey for Speed up.
@@ -426,19 +470,28 @@ void PlayScene::ConstructUI()
     // Button 1
     btn = new TurretButton(
         "play/floor.png", "play/dirt.png",
-        Engine::Sprite("play/tower-base.png", 1294, 136, 0, 0, 0, 0),
-        Engine::Sprite("play/turret-1.png", 1294, 136 - 8, 0, 0, 0, 0), 1294,
-        136, MachineGunTurret::Price);
+        Engine::Sprite("play/tower-base.png", 1500, 60, 0, 0, 0, 0),
+        Engine::Sprite("play/shovel.png", 1500, 60 - 8, 0, 0, 0, 0), 1500,
+        60, 0);
     // Reference: Class Member Function Pointer and std::bind.
     btn->SetOnClickCallback(std::bind(&PlayScene::UIBtnClicked, this, 0));
     UIGroup->AddNewControlObject(btn);
     // Button 2
     btn = new TurretButton(
         "play/floor.png", "play/dirt.png",
+        Engine::Sprite("play/tower-base.png", 1294, 136, 0, 0, 0, 0),
+        Engine::Sprite("play/turret-1.png", 1294, 136 - 8, 0, 0, 0, 0), 1294,
+        136, MachineGunTurret::Price);
+    // Reference: Class Member Function Pointer and std::bind.
+    btn->SetOnClickCallback(std::bind(&PlayScene::UIBtnClicked, this, 1));
+    UIGroup->AddNewControlObject(btn);
+    // Button 3
+    btn = new TurretButton(
+        "play/floor.png", "play/dirt.png",
         Engine::Sprite("play/tower-base.png", 1370, 136, 0, 0, 0, 0),
         Engine::Sprite("play/turret-2.png", 1370, 136 - 8, 0, 0, 0, 0), 1370,
         136, LaserTurret::Price);
-    btn->SetOnClickCallback(std::bind(&PlayScene::UIBtnClicked, this, 1));
+    btn->SetOnClickCallback(std::bind(&PlayScene::UIBtnClicked, this, 2));
     UIGroup->AddNewControlObject(btn);
 
     int w = Engine::GameEngine::GetInstance().GetScreenSize().x;
@@ -454,10 +507,28 @@ void PlayScene::UIBtnClicked(int id)
 {
     if (preview)
         UIGroup->RemoveObject(preview->GetObjectIterator());
-    if (id == 0 && money >= MachineGunTurret::Price)
+    if (id == 1 && money >= MachineGunTurret::Price)
         preview = new MachineGunTurret(0, 0);
-    else if (id == 1 && money >= LaserTurret::Price)
+    else if (id == 2 && money >= LaserTurret::Price)
         preview = new LaserTurret(0, 0);
+    else if (id == 0)
+    {
+        ALLEGRO_MOUSE_STATE mouse_state;
+        al_get_mouse_state(&mouse_state);
+        // Shovel
+        if (shovelActive)
+        {
+            UIGroup->RemoveObject(shovel->GetObjectIterator());
+            shovelActive = false;
+            return;
+        }
+        shovelActive = true;
+        shovel = new Engine::Sprite("play/shovel.png", mouse_state.x, mouse_state.y);
+        shovel->Tint = al_map_rgba(255, 255, 255, 200);
+        UIGroup->AddNewObject(shovel);
+        return;
+    }
+
     if (!preview)
         return;
     preview->Position = Engine::GameEngine::GetInstance().GetMousePosition();
