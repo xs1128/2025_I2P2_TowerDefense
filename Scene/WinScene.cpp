@@ -65,6 +65,9 @@ void WinScene::Terminate()
 void WinScene::Update(float deltaTime)
 {
     ticks += deltaTime;
+    if (input_timer > 0) {
+        input_timer--;
+    }
 }
 
 void WinScene::Draw() const
