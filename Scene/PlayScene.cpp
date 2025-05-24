@@ -8,6 +8,7 @@
 #include <string>
 #include <vector>
 
+#include "Enemy/BinaryEnemy.hpp"
 #include "Enemy/Enemy.hpp"
 #include "Enemy/PlaneEnemy.hpp"
 #include "Enemy/SoldierEnemy.hpp"
@@ -18,13 +19,16 @@
 #include "Engine/LOG.hpp"
 #include "Engine/Resources.hpp"
 #include "PlayScene.hpp"
+#include "Turret/FreezeTurret.hpp"
+#include "Turret/HomingMissileTurret.hpp"
 #include "Turret/LaserTurret.hpp"
 #include "Turret/MachineGunTurret.hpp"
-#include "Turret/FreezeTurret.hpp"
 #include "Turret/TurretButton.hpp"
 #include "UI/Animation/DirtyEffect.hpp"
 #include "UI/Animation/Plane.hpp"
 #include "UI/Component/Label.hpp"
+#include "UI/Component/Image.hpp"
+
 
 // DONE HACKATHON-4 (1/3): Trace how the game handles keyboard input.
 // DONE HACKATHON-4 (2/3): Find the cheat code sequence in this file.
@@ -89,6 +93,7 @@ void PlayScene::Initialize()
     bgmId = AudioHelper::PlayBGM("play.ogg");
     shovelActive = false;
 }
+
 void PlayScene::Terminate()
 {
     AudioHelper::StopBGM(bgmId);
@@ -190,6 +195,10 @@ void PlayScene::Update(float deltaTime)
             EnemyGroup->AddNewObject(
                 enemy = new TankEnemy(SpawnCoordinate.x, SpawnCoordinate.y));
             break;
+        case 4:
+            EnemyGroup->AddNewObject(
+                enemy = new BinaryEnemy(SpawnCoordinate.x, SpawnCoordinate.y));
+            break;
         default:
             continue;
         }
@@ -226,42 +235,43 @@ void PlayScene::Draw() const
 }
 void PlayScene::OnMouseDown(int button, int mx, int my)
 {
-    if ((button & 1) && !imgTarget->Visible && preview) {
-        // Cancel turret construct.
-        UIGroup->RemoveObject(preview->GetObjectIterator());
-        preview = nullptr;
-    }
-
-    if (shovelActive) {
-        // remove the sprite 
-        UIGroup->RemoveObject(shovel->GetObjectIterator());
-        shovelActive = false;
-        const int x = mx / BlockSize;
-        const int y = my / BlockSize;
-        if (x < 0 || x >= MapWidth || y < 0 || y >= MapHeight)
-            return;
-        // check if occupied
-        if (mapState[y][x] == TILE_OCCUPIED) {
-            mapState[y][x] = TILE_FLOOR;
-            // remove the turret
-            for (auto &it : TowerGroup->GetObjects()) {
-                if (it->Position.x == x * BlockSize + (double)BlockSize / 2 &&
-                    it->Position.y == y * BlockSize + (double)BlockSize / 2) {
-                    EarnMoney(
-                        dynamic_cast<Turret *>(it)->GetPrice() / 2);
-                    TowerGroup->RemoveObject(it->GetObjectIterator());
-                    // create sfx of shovel
-                    // TODO: add to credits.md
-                    AudioHelper::PlayAudio("shovel.ogg");
-                    break;
-                }
-            }
-            // remove the dirt
-            TileMapGroup->AddNewObject(
-                new Engine::Image("play/floor.png", x * BlockSize,
-                                  y * BlockSize, BlockSize, BlockSize));
+        if ((button & 1) && !imgTarget->Visible && preview) {
+            // Cancel turret construct.
+            UIGroup->RemoveObject(preview->GetObjectIterator());
+            preview = nullptr;
         }
-    }
+
+        if (shovelActive) {
+            // remove the sprite
+            UIGroup->RemoveObject(shovel->GetObjectIterator());
+            shovelActive = false;
+            const int x = mx / BlockSize;
+            const int y = my / BlockSize;
+            if (x < 0 || x >= MapWidth || y < 0 || y >= MapHeight)
+                return;
+            // check if occupied
+            if (mapState[y][x] == TILE_OCCUPIED) {
+                mapState[y][x] = TILE_FLOOR;
+                // remove the turret
+                for (auto &it : TowerGroup->GetObjects()) {
+                    if (it->Position.x ==
+                            x * BlockSize + (double)BlockSize / 2 &&
+                        it->Position.y ==
+                            y * BlockSize + (double)BlockSize / 2) {
+                        EarnMoney(dynamic_cast<Turret *>(it)->GetPrice() / 2);
+                        TowerGroup->RemoveObject(it->GetObjectIterator());
+                        // create sfx of shovel
+                        // TODO: add to credits.md
+                        AudioHelper::PlayAudio("shovel.ogg");
+                        break;
+                    }
+                }
+                // remove the dirt
+                TileMapGroup->AddNewObject(
+                    new Engine::Image("play/floor.png", x * BlockSize,
+                                      y * BlockSize, BlockSize, BlockSize));
+            }
+        }
 
     IScene::OnMouseDown(button, mx, my);
 }
@@ -299,9 +309,10 @@ void PlayScene::OnMouseUp(int button, int mx, int my)
             if (!CheckSpaceValid(x, y)) {
                 Engine::Sprite *sprite;
                 GroundEffectGroup->AddNewObject(
-                    sprite = new DirtyEffect("play/target-invalid.png", 1,
-                                             x * BlockSize + (double)BlockSize / 2,
-                                             y * BlockSize + (double)BlockSize / 2));
+                    sprite =
+                        new DirtyEffect("play/target-invalid.png", 1,
+                                        x * BlockSize + (double)BlockSize / 2,
+                                        y * BlockSize + (double)BlockSize / 2));
                 sprite->Rotation = 0;
                 return;
             }
@@ -372,10 +383,13 @@ void PlayScene::OnKeyDown(int keyCode)
         // Hotkey for LaserTurret.
         UIBtnClicked(2);
     }
-    else if (keyCode == ALLEGRO_KEY_E)
-    {
+    else if (keyCode == ALLEGRO_KEY_E) {
         // Hotkey for FreezeTurret
         UIBtnClicked(3);
+    }
+    else if (keyCode == ALLEGRO_KEY_R) {
+        // Hotkey for HomingMissileTurret
+        UIBtnClicked(4);
     }
     else if (keyCode >= ALLEGRO_KEY_0 && keyCode <= ALLEGRO_KEY_9) {
         // Hotkey for Speed up.
@@ -476,9 +490,9 @@ void PlayScene::ConstructUI()
     // Button 1
     btn = new TurretButton(
         "play/floor.png", "play/dirt.png",
-        Engine::Sprite("play/tower-base.png", 1500, 60, 0, 0, 0, 0),
-        Engine::Sprite("play/shovel.png", 1500, 60 - 8, 0, 0, 0, 0), 1500,
-        60, 0);
+        Engine::Sprite("play/shovel-base.png", 1500, 60, 0, 0, 0, 0),
+        Engine::Sprite("play/shovel.png", 1500, 60 - 8, 0, 0, 0, 0), 1500, 60,
+        0);
     // Reference: Class Member Function Pointer and std::bind.
     btn->SetOnClickCallback(std::bind(&PlayScene::UIBtnClicked, this, 0));
     UIGroup->AddNewControlObject(btn);
@@ -507,6 +521,14 @@ void PlayScene::ConstructUI()
         212, FreezeTurret::Price);
     btn->SetOnClickCallback(std::bind(&PlayScene::UIBtnClicked, this, 3));
     UIGroup->AddNewControlObject(btn);
+    // Button 5
+    btn = new TurretButton(
+        "play/floor.png", "play/dirt.png",
+        Engine::Sprite("play/tower-base.png", 1370, 212, 0, 0, 0, 0),
+        Engine::Sprite("play/turret-4.png", 1370, 212 - 8, 0, 0, 0, 0), 1370,
+        212, HomingMissileTurret::Price);
+    btn->SetOnClickCallback(std::bind(&PlayScene::UIBtnClicked, this, 4));
+    UIGroup->AddNewControlObject(btn);
 
     int w = Engine::GameEngine::GetInstance().GetScreenSize().x;
     int h = Engine::GameEngine::GetInstance().GetScreenSize().y;
@@ -527,19 +549,20 @@ void PlayScene::UIBtnClicked(int id)
         preview = new LaserTurret(0, 0);
     else if (id == 3 && money >= FreezeTurret::Price)
         preview = new FreezeTurret(0, 0);
-    else if (id == 0)
-    {
+    else if (id == 4 && money >= HomingMissileTurret::Price)
+        preview = new HomingMissileTurret(0, 0);
+    else if (id == 0) {
         ALLEGRO_MOUSE_STATE mouse_state;
         al_get_mouse_state(&mouse_state);
         // Shovel
-        if (shovelActive)
-        {
+        if (shovelActive) {
             UIGroup->RemoveObject(shovel->GetObjectIterator());
             shovelActive = false;
             return;
         }
         shovelActive = true;
-        shovel = new Engine::Sprite("play/shovel.png", mouse_state.x, mouse_state.y);
+        shovel =
+            new Engine::Sprite("play/shovel.png", mouse_state.x, mouse_state.y);
         shovel->Tint = al_map_rgba(255, 255, 255, 200);
         UIGroup->AddNewObject(shovel);
         return;

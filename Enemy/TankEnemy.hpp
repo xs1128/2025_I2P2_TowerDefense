@@ -10,6 +10,7 @@ private:
 
 public:
     TankEnemy(int x, int y);
+    void extracted() const;
     void Draw() const override;
     void Update(float deltaTime) override;
 };
