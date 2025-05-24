@@ -20,6 +20,7 @@
 #include "PlayScene.hpp"
 #include "Turret/LaserTurret.hpp"
 #include "Turret/MachineGunTurret.hpp"
+#include "Turret/FreezeTurret.hpp"
 #include "Turret/TurretButton.hpp"
 #include "UI/Animation/DirtyEffect.hpp"
 #include "UI/Animation/Plane.hpp"
@@ -371,6 +372,11 @@ void PlayScene::OnKeyDown(int keyCode)
         // Hotkey for LaserTurret.
         UIBtnClicked(2);
     }
+    else if (keyCode == ALLEGRO_KEY_E)
+    {
+        // Hotkey for FreezeTurret
+        UIBtnClicked(3);
+    }
     else if (keyCode >= ALLEGRO_KEY_0 && keyCode <= ALLEGRO_KEY_9) {
         // Hotkey for Speed up.
         SpeedMult = keyCode - ALLEGRO_KEY_0;
@@ -493,6 +499,14 @@ void PlayScene::ConstructUI()
         136, LaserTurret::Price);
     btn->SetOnClickCallback(std::bind(&PlayScene::UIBtnClicked, this, 2));
     UIGroup->AddNewControlObject(btn);
+    // Button 4
+    btn = new TurretButton(
+        "play/floor.png", "play/dirt.png",
+        Engine::Sprite("play/tower-base.png", 1294, 212, 0, 0, 0, 0),
+        Engine::Sprite("play/turret-6.png", 1294, 212 - 8, 0, 0, 0, 0), 1294,
+        212, FreezeTurret::Price);
+    btn->SetOnClickCallback(std::bind(&PlayScene::UIBtnClicked, this, 3));
+    UIGroup->AddNewControlObject(btn);
 
     int w = Engine::GameEngine::GetInstance().GetScreenSize().x;
     int h = Engine::GameEngine::GetInstance().GetScreenSize().y;
@@ -511,6 +525,8 @@ void PlayScene::UIBtnClicked(int id)
         preview = new MachineGunTurret(0, 0);
     else if (id == 2 && money >= LaserTurret::Price)
         preview = new LaserTurret(0, 0);
+    else if (id == 3 && money >= FreezeTurret::Price)
+        preview = new FreezeTurret(0, 0);
     else if (id == 0)
     {
         ALLEGRO_MOUSE_STATE mouse_state;

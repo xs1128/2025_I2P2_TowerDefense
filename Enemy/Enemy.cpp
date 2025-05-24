@@ -34,6 +34,7 @@ void Enemy::OnExplode() {
 Enemy::Enemy(std::string img, float x, float y, float radius, float speed, float hp, int money) : Engine::Sprite(img, x, y), speed(speed), hp(hp), money(money) {
     CollisionRadius = radius;
     reachEndTime = 0;
+    slowing = false;
 }
 void Enemy::Hit(float damage) {
     hp -= damage;
@@ -83,6 +84,19 @@ void Enemy::UpdatePath(const std::vector<std::vector<int>> &mapDistance) {
     path[0] = PlayScene::EndGridPoint;
 }
 void Enemy::Update(float deltaTime) {
+    // update slowtime block if enemy is slowed
+    if (slowTime > 0 && slowing)
+    {
+        slowTime -= deltaTime;
+    } else if (slowTime <= 0 && slowing) {
+        // if not slowing, then restore speed
+        slowing = false;
+        slowTime = 0;
+        Velocity.x *= 2.0;
+        Velocity.y *= 2.0;
+        Tint = al_map_rgba(255, 255, 255, 255);
+    }
+
     // Pre-calculate the velocity.
     float remainSpeed = speed * deltaTime;
     while (remainSpeed != 0) {
@@ -111,6 +125,13 @@ void Enemy::Update(float deltaTime) {
             remainSpeed = 0;
         }
     }
+
+    // if block for freeze turret
+    if (slowTime > 0 && slowing) {
+        Velocity.x *= 0.5;
+        Velocity.y *= 0.5;
+    }
+
     Rotation = atan2(Velocity.y, Velocity.x);
     Sprite::Update(deltaTime);
 }
