@@ -575,18 +575,16 @@ void PlayScene::ConstructUI()
                                    255, 0.5, 0.5));
 }
 
-void PlayScene::UIBtnClicked(int id)
-{
-    if (preview)
-        UIGroup->RemoveObject(preview->GetObjectIterator());
+void PlayScene::UIBtnClicked(int id) {
+    Turret *next_preview = nullptr;
     if (id == 1 && money >= MachineGunTurret::Price)
-        preview = new MachineGunTurret(0, 0);
+        next_preview = new MachineGunTurret(0, 0);
     else if (id == 2 && money >= LaserTurret::Price)
-        preview = new LaserTurret(0, 0);
+        next_preview = new LaserTurret(0, 0);
     else if (id == 3 && money >= FreezeTurret::Price)
-        preview = new FreezeTurret(0, 0);
+        next_preview = new FreezeTurret(0, 0);
     else if (id == 4 && money >= HomingMissileTurret::Price)
-        preview = new HomingMissileTurret(0, 0);
+        next_preview = new HomingMissileTurret(0, 0);
     else if (id == 0) {
         ALLEGRO_MOUSE_STATE mouse_state;
         al_get_mouse_state(&mouse_state);
@@ -604,8 +602,12 @@ void PlayScene::UIBtnClicked(int id)
         return;
     }
 
-    if (!preview)
-        return;
+    if (!next_preview)
+        return;   // not enough money or invalid turret.
+
+    if (preview)
+        UIGroup->RemoveObject(preview->GetObjectIterator());
+    preview = next_preview;
     preview->Position = Engine::GameEngine::GetInstance().GetMousePosition();
     preview->Tint = al_map_rgba(255, 255, 255, 200);
     preview->Enabled = false;
