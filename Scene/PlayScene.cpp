@@ -30,6 +30,7 @@
 #include "UI/Component/Label.hpp"
 #include "allegro5/allegro_primitives.h"
 #include "allegro5/keycodes.h"
+#include "Generator/ProceduralMapGenerator.hpp"
 
 // DONE HACKATHON-4 (1/3): Trace how the game handles keyboard input.
 // DONE HACKATHON-4 (2/3): Find the cheat code sequence in this file.
@@ -432,6 +433,25 @@ void PlayScene::EarnMoney(int money)
 }
 void PlayScene::ReadMap()
 {
+    if (MapId == 3) { 
+        auto seed = std::random_device{}();
+        ProceduralMapGenerator generator(seed);
+        auto proceduralMap = generator.generateMap(2);        
+
+        // convert to mapState format
+        mapState = std::vector<std::vector<TileType>>(MapHeight, std::vector<TileType>(MapWidth));
+        for (int i = 0; i < MapHeight; i++) {
+            for (int j = 0; j < MapWidth; j++) {
+                mapState[i][j] = proceduralMap[i][j] ? TILE_FLOOR : TILE_DIRT;
+                if (proceduralMap[i][j])
+                    TileMapGroup->AddNewObject(new Engine::Image("play/floor.png", j * BlockSize, i * BlockSize, BlockSize, BlockSize));
+                else
+                    TileMapGroup->AddNewObject(new Engine::Image("play/dirt.png", j * BlockSize, i * BlockSize, BlockSize, BlockSize));
+            }
+        }
+        return;
+    }
+
     std::string filename =
         std::string("Resource/map") + std::to_string(MapId) + ".txt";
     // Read map file.
@@ -575,18 +595,16 @@ void PlayScene::ConstructUI()
                                    255, 0.5, 0.5));
 }
 
-void PlayScene::UIBtnClicked(int id)
-{
-    if (preview)
-        UIGroup->RemoveObject(preview->GetObjectIterator());
+void PlayScene::UIBtnClicked(int id) {
+    Turret *next_preview = nullptr;
     if (id == 1 && money >= MachineGunTurret::Price)
-        preview = new MachineGunTurret(0, 0);
+        next_preview = new MachineGunTurret(0, 0);
     else if (id == 2 && money >= LaserTurret::Price)
-        preview = new LaserTurret(0, 0);
+        next_preview = new LaserTurret(0, 0);
     else if (id == 3 && money >= FreezeTurret::Price)
-        preview = new FreezeTurret(0, 0);
+        next_preview = new FreezeTurret(0, 0);
     else if (id == 4 && money >= HomingMissileTurret::Price)
-        preview = new HomingMissileTurret(0, 0);
+        next_preview = new HomingMissileTurret(0, 0);
     else if (id == 0) {
         ALLEGRO_MOUSE_STATE mouse_state;
         al_get_mouse_state(&mouse_state);
@@ -604,8 +622,12 @@ void PlayScene::UIBtnClicked(int id)
         return;
     }
 
-    if (!preview)
-        return;
+    if (!next_preview)
+        return;   // not enough money or invalid turret.
+
+    if (preview)
+        UIGroup->RemoveObject(preview->GetObjectIterator());
+    preview = next_preview;
     preview->Position = Engine::GameEngine::GetInstance().GetMousePosition();
     preview->Tint = al_map_rgba(255, 255, 255, 200);
     preview->Enabled = false;
