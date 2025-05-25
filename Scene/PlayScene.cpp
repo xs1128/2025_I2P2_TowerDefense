@@ -30,6 +30,7 @@
 #include "UI/Component/Label.hpp"
 #include "allegro5/allegro_primitives.h"
 #include "allegro5/keycodes.h"
+#include "Generator/ProceduralMapGenerator.hpp"
 
 // DONE HACKATHON-4 (1/3): Trace how the game handles keyboard input.
 // DONE HACKATHON-4 (2/3): Find the cheat code sequence in this file.
@@ -432,6 +433,25 @@ void PlayScene::EarnMoney(int money)
 }
 void PlayScene::ReadMap()
 {
+    if (MapId == 3) { 
+        auto seed = std::random_device{}();
+        ProceduralMapGenerator generator(seed);
+        auto proceduralMap = generator.generateMap(2);        
+
+        // convert to mapState format
+        mapState = std::vector<std::vector<TileType>>(MapHeight, std::vector<TileType>(MapWidth));
+        for (int i = 0; i < MapHeight; i++) {
+            for (int j = 0; j < MapWidth; j++) {
+                mapState[i][j] = proceduralMap[i][j] ? TILE_FLOOR : TILE_DIRT;
+                if (proceduralMap[i][j])
+                    TileMapGroup->AddNewObject(new Engine::Image("play/floor.png", j * BlockSize, i * BlockSize, BlockSize, BlockSize));
+                else
+                    TileMapGroup->AddNewObject(new Engine::Image("play/dirt.png", j * BlockSize, i * BlockSize, BlockSize, BlockSize));
+            }
+        }
+        return;
+    }
+
     std::string filename =
         std::string("Resource/map") + std::to_string(MapId) + ".txt";
     // Read map file.

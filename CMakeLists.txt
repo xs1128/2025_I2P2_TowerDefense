@@ -105,6 +105,9 @@ add_executable(2025_I2P2_TowerDefense
     UI/Component/Label.hpp
     UI/Component/Slider.cpp
     UI/Component/Slider.hpp
+
+    Generator/ProceduralMapGenerator.cpp
+    Generator/ProceduralMapGenerator.hpp
     
     main.cpp
 )
