@@ -26,9 +26,10 @@
 #include "Turret/TurretButton.hpp"
 #include "UI/Animation/DirtyEffect.hpp"
 #include "UI/Animation/Plane.hpp"
-#include "UI/Component/Label.hpp"
 #include "UI/Component/Image.hpp"
-
+#include "UI/Component/Label.hpp"
+#include "allegro5/allegro_primitives.h"
+#include "allegro5/keycodes.h"
 
 // DONE HACKATHON-4 (1/3): Trace how the game handles keyboard input.
 // DONE HACKATHON-4 (2/3): Find the cheat code sequence in this file.
@@ -232,46 +233,58 @@ void PlayScene::Draw() const
             }
         }
     }
+    if (SpeedMult == 0) {
+        // Get screen dimensions
+        int w = Engine::GameEngine::GetInstance().GetScreenSize().x;
+        int h = Engine::GameEngine::GetInstance().GetScreenSize().y;
+        
+        al_draw_filled_rectangle(0, 0, w, h, 
+                                al_map_rgba(0, 0, 0, 100));
+        
+        // Optional: Add "PAUSED" text in the center
+        Engine::Label pauseLabel("PAUSED", "pirulen.ttf", 128, 
+                                (double)w / 2, (double)h / 2);
+        pauseLabel.Anchor = Engine::Point(0.5, 0.5);
+        pauseLabel.Draw();
+    }
 }
 void PlayScene::OnMouseDown(int button, int mx, int my)
 {
-        if ((button & 1) && !imgTarget->Visible && preview) {
-            // Cancel turret construct.
-            UIGroup->RemoveObject(preview->GetObjectIterator());
-            preview = nullptr;
-        }
+    if ((button & 1) && !imgTarget->Visible && preview) {
+        // Cancel turret construct.
+        UIGroup->RemoveObject(preview->GetObjectIterator());
+        preview = nullptr;
+    }
 
-        if (shovelActive) {
-            // remove the sprite
-            UIGroup->RemoveObject(shovel->GetObjectIterator());
-            shovelActive = false;
-            const int x = mx / BlockSize;
-            const int y = my / BlockSize;
-            if (x < 0 || x >= MapWidth || y < 0 || y >= MapHeight)
-                return;
-            // check if occupied
-            if (mapState[y][x] == TILE_OCCUPIED) {
-                mapState[y][x] = TILE_FLOOR;
-                // remove the turret
-                for (auto &it : TowerGroup->GetObjects()) {
-                    if (it->Position.x ==
-                            x * BlockSize + (double)BlockSize / 2 &&
-                        it->Position.y ==
-                            y * BlockSize + (double)BlockSize / 2) {
-                        EarnMoney(dynamic_cast<Turret *>(it)->GetPrice() / 2);
-                        TowerGroup->RemoveObject(it->GetObjectIterator());
-                        // create sfx of shovel
-                        // TODO: add to credits.md
-                        AudioHelper::PlayAudio("shovel.ogg");
-                        break;
-                    }
+    if (shovelActive) {
+        // remove the sprite
+        UIGroup->RemoveObject(shovel->GetObjectIterator());
+        shovelActive = false;
+        const int x = mx / BlockSize;
+        const int y = my / BlockSize;
+        if (x < 0 || x >= MapWidth || y < 0 || y >= MapHeight)
+            return;
+        // check if occupied
+        if (mapState[y][x] == TILE_OCCUPIED) {
+            mapState[y][x] = TILE_FLOOR;
+            // remove the turret
+            for (auto &it : TowerGroup->GetObjects()) {
+                if (it->Position.x == x * BlockSize + (double)BlockSize / 2 &&
+                    it->Position.y == y * BlockSize + (double)BlockSize / 2) {
+                    EarnMoney(dynamic_cast<Turret *>(it)->GetPrice() / 2);
+                    TowerGroup->RemoveObject(it->GetObjectIterator());
+                    // create sfx of shovel
+                    // TODO: add to credits.md
+                    AudioHelper::PlayAudio("shovel.ogg");
+                    break;
                 }
-                // remove the dirt
-                TileMapGroup->AddNewObject(
-                    new Engine::Image("play/floor.png", x * BlockSize,
-                                      y * BlockSize, BlockSize, BlockSize));
             }
+            // remove the dirt
+            TileMapGroup->AddNewObject(
+                new Engine::Image("play/floor.png", x * BlockSize,
+                                  y * BlockSize, BlockSize, BlockSize));
         }
+    }
 
     IScene::OnMouseDown(button, mx, my);
 }
@@ -394,6 +407,13 @@ void PlayScene::OnKeyDown(int keyCode)
     else if (keyCode >= ALLEGRO_KEY_0 && keyCode <= ALLEGRO_KEY_9) {
         // Hotkey for Speed up.
         SpeedMult = keyCode - ALLEGRO_KEY_0;
+    }
+    else if (keyCode == ALLEGRO_KEY_ESCAPE) {
+        if (SpeedMult == 0) {
+            SpeedMult = 1;
+        }
+        else
+            SpeedMult = 0;
     }
 }
 void PlayScene::Hit()
@@ -537,6 +557,22 @@ void PlayScene::ConstructUI()
         new Engine::Sprite("play/benjamin.png", w - shift, h - shift);
     dangerIndicator->Tint.a = 0;
     UIGroup->AddNewObject(dangerIndicator);
+
+    double halfW = (double)w / 2;
+    double halfH = (double)h / 2;
+    Engine::ImageButton *btn1;
+    btn1 = new Engine::ImageButton("stage-select/dirt.png",
+                                   "stage-select/floor.png", halfW * 1.8,
+                                   (double)halfH * 1.8 - 50, 100, 100);
+    btn1->SetOnClickCallback(std::bind(&PlayScene::BackOnClick, this, 0));
+    AddNewControlObject(btn1);
+    AddNewObject(new Engine::Label("HOME", "pirulen.ttf", 20, halfW * 1.8 + 50,
+                                   (double)halfH * 1.8, 0, 0, 0, 255, 0.5,
+                                   0.5));
+
+    AddNewObject(new Engine::Label("\"ESC\" to Pause", "pirulen.ttf", 24,
+                                   halfW * 1.8, (double)halfH * 3 / 2, 0, 0, 0,
+                                   255, 0.5, 0.5));
 }
 
 void PlayScene::UIBtnClicked(int id)
@@ -658,4 +694,11 @@ std::vector<std::vector<int>> PlayScene::CalculateBFSDistance()
         }
     }
     return map;
+}
+
+void PlayScene::BackOnClick(int stage)
+{
+    if (stage == 0) {
+        Engine::GameEngine::GetInstance().ChangeScene("start");
+    }
 }
